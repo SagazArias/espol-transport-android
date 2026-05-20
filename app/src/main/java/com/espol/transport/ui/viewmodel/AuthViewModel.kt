@@ -115,13 +115,15 @@ class AuthViewModel(
         }
     }
 
-    fun login(email: String, password: String, onSuccess: () -> Unit) {
+    suspend fun hasPersistedSession(): Boolean = tokenStore.shouldAutoLogin()
+
+    fun login(email: String, password: String, stayLoggedIn: Boolean, onSuccess: () -> Unit) {
         busy = true
         errorMessage = null
         viewModelScope.launch {
             try {
                 val token = api.login(LoginRequest(email.trim().lowercase(), password))
-                tokenStore.saveToken(token.access_token)
+                tokenStore.saveToken(token.access_token, stayLoggedIn)
                 onSuccess()
             } catch (e: Exception) {
                 errorMessage = e.toUserMessage()

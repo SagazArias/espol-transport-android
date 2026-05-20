@@ -80,6 +80,40 @@ class TransportViewModel(private val api: ApiService) : ViewModel() {
         }
     }
 
+    fun completeTrip(
+        bookingId: String,
+        onSuccess: (com.espol.transport.data.model.TripBookingCompleteOut) -> Unit,
+    ) {
+        busy = true
+        errorMessage = null
+        viewModelScope.launch {
+            try {
+                val result = api.completeBooking(bookingId)
+                inbox = result.inbox
+                onSuccess(result)
+            } catch (e: Exception) {
+                errorMessage = e.toUserMessage()
+            } finally {
+                busy = false
+            }
+        }
+    }
+
+    fun rateDriver(bookingId: String, stars: Int, onSuccess: () -> Unit) {
+        busy = true
+        errorMessage = null
+        viewModelScope.launch {
+            try {
+                api.rateBooking(bookingId, com.espol.transport.data.model.TripBookingRateIn(stars))
+                onSuccess()
+            } catch (e: Exception) {
+                errorMessage = e.toUserMessage()
+            } finally {
+                busy = false
+            }
+        }
+    }
+
     fun cancelTrip(bookingId: String, reason: String, onSuccess: () -> Unit) {
         busy = true
         errorMessage = null

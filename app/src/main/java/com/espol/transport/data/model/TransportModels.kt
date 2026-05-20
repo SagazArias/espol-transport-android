@@ -74,7 +74,11 @@ data class PassengerMatchResult(
     val direction: String,
     val trip_time: String,
     val time_delta_minutes: Int,
-    val available_seats: Int = 3,
+    val seat_capacity: Int = 3,
+    val available_seats: Int = 0,
+    val seats_full: Boolean = false,
+    val driver_rating_avg: Double? = null,
+    val driver_rating_count: Int = 0,
     val trip_fare_usd: Double = 1.5,
     val ida_route_sectors: List<String> = emptyList(),
     val regreso_route_sectors: List<String> = emptyList(),
@@ -122,6 +126,15 @@ data class InboxOut(
 )
 
 data class TripBookingCancelIn(val reason: String)
+
+data class TripBookingCompleteOut(
+    val inbox: InboxOut,
+    val prompt_passenger_rating: Boolean = false,
+    val driver_id: String? = null,
+    val booking_id: String,
+)
+
+data class TripBookingRateIn(val stars: Int)
 
 data class DriverBookingNotification(
     val id: String,

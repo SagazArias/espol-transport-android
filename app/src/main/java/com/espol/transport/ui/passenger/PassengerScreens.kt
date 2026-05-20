@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -24,6 +25,9 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarBorder
+import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -311,6 +315,27 @@ fun PassengerResultsScreen(
 }
 
 @Composable
+private fun DriverRatingRow(avg: Double?, count: Int) {
+    if (count == 0 || avg == null) {
+        Text("Sin calificaciones aún", style = MaterialTheme.typography.bodySmall)
+        return
+    }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text("Calificación: %.1f".format(avg), style = MaterialTheme.typography.bodyMedium)
+        val fullStars = avg.toInt().coerceIn(0, 5)
+        repeat(5) { index ->
+            Icon(
+                imageVector = if (index < fullStars) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+        Text("($count)", style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+@Composable
 private fun DriverMatchCard(
     r: PassengerMatchResult,
     bookingBusy: Boolean,
@@ -336,12 +361,22 @@ private fun DriverMatchCard(
             Text("Marca: ${r.vehicle_brand ?: "—"}")
             Text("Modelo: ${r.vehicle_model ?: "—"}")
             Text("Tarifa: $${"%.2f".format(r.trip_fare_usd)}", style = MaterialTheme.typography.bodyMedium)
-            Text("Cupos disponibles: ${r.available_seats}", style = MaterialTheme.typography.bodySmall)
+            DriverRatingRow(r.driver_rating_avg, r.driver_rating_count)
+            Text(
+                if (r.seats_full) "Sin cupos disponibles (${r.seat_capacity}/${r.seat_capacity} ocupados)"
+                else "Cupos disponibles: ${r.available_seats} de ${r.seat_capacity}",
+                style = MaterialTheme.typography.bodySmall,
+                color = if (r.seats_full) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             if (bookingBusy) {
                 CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
             } else {
-                Button(onClick = onAgendar, modifier = Modifier.fillMaxWidth()) {
-                    Text("Agendar viaje")
+                Button(
+                    onClick = onAgendar,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !r.seats_full,
+                ) {
+                    Text(if (r.seats_full) "Cupos llenos" else "Agendar viaje")
                 }
             }
         }

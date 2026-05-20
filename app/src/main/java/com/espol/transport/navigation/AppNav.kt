@@ -22,6 +22,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -40,8 +41,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.espol.transport.ui.components.PasswordTextField
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -49,7 +50,6 @@ import androidx.navigation.compose.rememberNavController
 import com.espol.transport.AppContainer
 import com.espol.transport.BuildConfig
 import com.espol.transport.data.model.UserMe
-import com.espol.transport.BuildConfig
 import com.espol.transport.ui.util.PASSWORD_HINT
 import com.espol.transport.ui.util.isStrongPassword
 import com.espol.transport.ui.util.toUserMessage
@@ -62,6 +62,7 @@ import com.espol.transport.ui.viewmodel.TransportViewModel
 import kotlinx.coroutines.launch
 
 private object Routes {
+    const val Bootstrap = "bootstrap"
     const val Welcome = "welcome"
     const val LoginRolePick = "login_role"
     const val RegisterRolePick = "register_role"
@@ -97,11 +98,21 @@ fun AppNav(container: AppContainer) {
     ) { padding ->
         NavHost(
             navController = nav,
-            startDestination = Routes.Welcome,
+            startDestination = Routes.Bootstrap,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
         ) {
+            composable(Routes.Bootstrap) {
+                SessionBootstrapScreen(
+                    authVm = authVm,
+                    onContinue = { destination ->
+                        nav.navigate(destination) {
+                            popUpTo(Routes.Bootstrap) { inclusive = true }
+                        }
+                    },
+                )
+            }
             composable(Routes.Welcome) {
                 WelcomeScreen(
                     onLogin = { nav.navigate(Routes.LoginRolePick) },
@@ -289,14 +300,24 @@ private fun WelcomeScreen(
         Button(onClick = onRegister, modifier = Modifier.fillMaxWidth()) {
             Text("Crear una cuenta")
         }
-        if (BuildConfig.DEBUG) {
-            Spacer(Modifier.height(16.dp))
-            Text(
-                "API: ${BuildConfig.API_BASE_URL}",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+    }
+}
+
+@Composable
+private fun SessionBootstrapScreen(
+    authVm: AuthViewModel,
+    onContinue: (String) -> Unit,
+) {
+    LaunchedEffect(Unit) {
+        val dest = if (authVm.hasPersistedSession()) Routes.RoleGate else Routes.Welcome
+        onContinue(dest)
+    }
+    Column(
+        Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        CircularProgressIndicator()
     }
 }
 
@@ -401,6 +422,7 @@ private fun LoginScreen(
     val scope = rememberCoroutineScope()
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
+    var stayLoggedIn by rememberSaveable { mutableStateOf(true) }
 
     Scaffold(
         topBar = {
@@ -433,20 +455,25 @@ private fun LoginScreen(
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             )
-            OutlinedTextField(
+            PasswordTextField(
                 value = password,
-                onValueChange = { authVm.clearError(); password = it },
-                label = { Text("Contraseña") },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth(),
+                onValueChange = { authVm.clearError(); password = it.filter { ch -> !ch.isWhitespace() } },
+                label = "Contraseña",
+                supportingText = PASSWORD_HINT,
             )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Checkbox(checked = stayLoggedIn, onCheckedChange = { stayLoggedIn = it })
+                Text("Mantener sesión iniciada")
+            }
             if (authVm.busy) {
                 CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
             } else {
                 Button(
                     onClick = {
-                        authVm.login(email, password) {
+                        authVm.login(email, password, stayLoggedIn) {
                             scope.launch {
                                 try {
                                     val me = authVm.fetchMe()
@@ -621,14 +648,11 @@ private fun PassengerRegisterScreen(
                 label = { Text("Correo institucional") },
                 modifier = Modifier.fillMaxWidth(),
             )
-            OutlinedTextField(
+            PasswordTextField(
                 value = password,
-                onValueChange = { authVm.clearError(); password = it },
-                label = { Text("Contraseña") },
-                supportingText = { Text(PASSWORD_HINT) },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth(),
+                onValueChange = { authVm.clearError(); password = it.filter { ch -> !ch.isWhitespace() } },
+                label = "Contraseña",
+                supportingText = PASSWORD_HINT,
             )
             OutlinedTextField(
                 value = otp,
@@ -715,14 +739,11 @@ private fun DriverRegisterScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 modifier = Modifier.fillMaxWidth()
             )
-            OutlinedTextField(
+            PasswordTextField(
                 value = password,
-                onValueChange = { authVm.clearError(); password = it },
-                label = { Text("Contraseña") },
-                supportingText = { Text(PASSWORD_HINT) },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth(),
+                onValueChange = { authVm.clearError(); password = it.filter { ch -> !ch.isWhitespace() } },
+                label = "Contraseña",
+                supportingText = PASSWORD_HINT,
             )
             OutlinedTextField(plate, { authVm.clearError(); plate = it }, label = { Text("Placa") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(brand, { authVm.clearError(); brand = it }, label = { Text("Marca del auto") }, singleLine = true, modifier = Modifier.fillMaxWidth())
@@ -765,6 +786,7 @@ private fun RoleGateScreen(
                 else -> loadError = "Rol de usuario no reconocido."
             }
         } catch (e: Exception) {
+            authVm.logout { }
             loadError = e.toUserMessage()
         }
     }
@@ -776,7 +798,7 @@ private fun RoleGateScreen(
     ) {
         if (loadError != null) {
             Text(loadError!!, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(24.dp))
-            Button(onClick = onError) { Text("Volver") }
+            Button(onClick = onError) { Text("Ir a inicio de sesión") }
         } else {
             CircularProgressIndicator()
         }

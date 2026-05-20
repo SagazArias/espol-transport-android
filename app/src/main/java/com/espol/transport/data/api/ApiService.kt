@@ -10,6 +10,8 @@ import com.espol.transport.data.model.AllowedFaresOut
 import com.espol.transport.data.model.DriverBookingNotification
 import com.espol.transport.data.model.InboxOut
 import com.espol.transport.data.model.TripBookingCancelIn
+import com.espol.transport.data.model.TripBookingCompleteOut
+import com.espol.transport.data.model.TripBookingRateIn
 import com.espol.transport.data.model.DriverWeeklyScheduleIn
 import com.espol.transport.data.model.DriverWeeklyScheduleOut
 import com.espol.transport.data.model.PassengerMatchResponse
@@ -67,4 +69,10 @@ interface ApiService {
 
     @POST("bookings/{id}/cancel")
     suspend fun cancelBooking(@retrofit2.http.Path("id") id: String, @Body body: TripBookingCancelIn): InboxOut
+
+    @POST("bookings/{id}/complete")
+    suspend fun completeBooking(@retrofit2.http.Path("id") id: String): TripBookingCompleteOut
+
+    @POST("bookings/{id}/rate")
+    suspend fun rateBooking(@retrofit2.http.Path("id") id: String, @Body body: TripBookingRateIn): Unit
 }
