@@ -14,6 +14,7 @@ data class PassengerRegisterRequest(
     val phone: String,
     val email: String,
     val password: String,
+    val recovery_phrase: String,
     val otp_code: String,
 )
 
@@ -23,10 +24,28 @@ data class DriverRegisterRequest(
     val phone: String,
     val email: String,
     val password: String,
+    val recovery_phrase: String,
     val plate: String,
     val brand: String,
     val model: String,
 )
+
+data class PasswordRecoveryVerifyRequest(
+    val email: String,
+    val recovery_phrase: String,
+)
+
+data class PasswordRecoveryVerifyResponse(
+    val reset_token: String,
+    val expires_in_minutes: Int,
+)
+
+data class PasswordRecoveryResetRequest(
+    val reset_token: String,
+    val new_password: String,
+)
+
+data class PasswordRecoveryResetResponse(val message: String)
 
 data class LoginRequest(val email: String, val password: String)
 

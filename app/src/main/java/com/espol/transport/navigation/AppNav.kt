@@ -51,7 +51,9 @@ import com.espol.transport.AppContainer
 import com.espol.transport.BuildConfig
 import com.espol.transport.data.model.UserMe
 import com.espol.transport.ui.util.PASSWORD_HINT
+import com.espol.transport.ui.util.RECOVERY_PHRASE_HINT
 import com.espol.transport.ui.util.isStrongPassword
+import com.espol.transport.ui.util.isValidRecoveryPhrase
 import com.espol.transport.ui.util.toUserMessage
 import com.espol.transport.ui.driver.DriverScheduleScreen
 import com.espol.transport.ui.inbox.InboxScreen
@@ -67,6 +69,8 @@ private object Routes {
     const val LoginRolePick = "login_role"
     const val RegisterRolePick = "register_role"
     const val Login = "login"
+    const val ForgotPassword = "forgot_password"
+    const val ResetPassword = "reset_password"
     const val PassengerOtp = "passenger_otp"
     const val PassengerRegister = "passenger_register"
     const val DriverRegister = "driver_register"
@@ -144,8 +148,28 @@ fun AppNav(container: AppContainer) {
                     authVm = authVm,
                     expectedRole = loginExpectedRole,
                     onBack = { nav.popBackStack() },
+                    onForgotPassword = { nav.navigate(Routes.ForgotPassword) },
                     onLoggedIn = {
                         nav.navigate(Routes.RoleGate) {
+                            popUpTo(Routes.Welcome) { inclusive = false }
+                        }
+                    },
+                )
+            }
+            composable(Routes.ForgotPassword) {
+                ForgotPasswordScreen(
+                    authVm = authVm,
+                    onBack = { nav.popBackStack() },
+                    onVerified = { nav.navigate(Routes.ResetPassword) },
+                )
+            }
+            composable(Routes.ResetPassword) {
+                ResetPasswordScreen(
+                    authVm = authVm,
+                    onBack = { nav.popBackStack() },
+                    onReset = {
+                        scope.launch { snack.showSnackbar("Contraseña actualizada. Inicia sesión.") }
+                        nav.navigate(Routes.Login) {
                             popUpTo(Routes.Welcome) { inclusive = false }
                         }
                     },
@@ -417,6 +441,7 @@ private fun LoginScreen(
     authVm: AuthViewModel,
     expectedRole: String?,
     onBack: () -> Unit,
+    onForgotPassword: () -> Unit,
     onLoggedIn: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -467,6 +492,9 @@ private fun LoginScreen(
             ) {
                 Checkbox(checked = stayLoggedIn, onCheckedChange = { stayLoggedIn = it })
                 Text("Mantener sesión iniciada")
+            }
+            TextButton(onClick = onForgotPassword, modifier = Modifier.align(Alignment.End)) {
+                Text("¿Olvidaste tu contraseña?")
             }
             if (authVm.busy) {
                 CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
@@ -580,6 +608,7 @@ private fun PassengerRegisterScreen(
     var phone by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
+    var recoveryPhrase by rememberSaveable { mutableStateOf("") }
     var otp by rememberSaveable { mutableStateOf("") }
 
     LaunchedEffect(initialEmail, initialOtp) {
@@ -655,6 +684,14 @@ private fun PassengerRegisterScreen(
                 supportingText = PASSWORD_HINT,
             )
             OutlinedTextField(
+                value = recoveryPhrase,
+                onValueChange = { authVm.clearError(); recoveryPhrase = it.filter { ch -> !ch.isWhitespace() } },
+                label = { Text("Palabra clave de recuperación") },
+                supportingText = { Text(RECOVERY_PHRASE_HINT) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
                 value = otp,
                 onValueChange = { if (it.length <= 6) otp = it.filter { ch -> ch.isDigit() } },
                 label = { Text("Código de 6 dígitos") },
@@ -667,11 +704,11 @@ private fun PassengerRegisterScreen(
             } else {
                 Button(
                     onClick = {
-                        authVm.registerPassenger(first, last, phone, email, password, otp, onRegistered)
+                        authVm.registerPassenger(first, last, phone, email, password, recoveryPhrase, otp, onRegistered)
                     },
                     enabled = first.isNotBlank() && last.isNotBlank() && phone.length >= 8 &&
-                        isStrongPassword(password) && otp.length == 6 &&
-                        email.endsWith("@espol.edu.ec", ignoreCase = true),
+                        isStrongPassword(password) && isValidRecoveryPhrase(recoveryPhrase) &&
+                        otp.length == 6 && email.endsWith("@espol.edu.ec", ignoreCase = true),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text("Crear cuenta")
@@ -693,6 +730,7 @@ private fun DriverRegisterScreen(
     var phone by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
+    var recoveryPhrase by rememberSaveable { mutableStateOf("") }
     var plate by rememberSaveable { mutableStateOf("") }
     var brand by rememberSaveable { mutableStateOf("") }
     var model by rememberSaveable { mutableStateOf("") }
@@ -745,6 +783,14 @@ private fun DriverRegisterScreen(
                 label = "Contraseña",
                 supportingText = PASSWORD_HINT,
             )
+            OutlinedTextField(
+                value = recoveryPhrase,
+                onValueChange = { authVm.clearError(); recoveryPhrase = it.filter { ch -> !ch.isWhitespace() } },
+                label = { Text("Palabra clave de recuperación") },
+                supportingText = { Text(RECOVERY_PHRASE_HINT) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
             OutlinedTextField(plate, { authVm.clearError(); plate = it }, label = { Text("Placa") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(brand, { authVm.clearError(); brand = it }, label = { Text("Marca del auto") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(model, { authVm.clearError(); model = it }, label = { Text("Modelo") }, singleLine = true, modifier = Modifier.fillMaxWidth())
@@ -753,10 +799,10 @@ private fun DriverRegisterScreen(
             } else {
                 Button(
                     onClick = {
-                        authVm.registerDriver(first, last, phone, email, password, plate, brand, model, onRegistered)
+                        authVm.registerDriver(first, last, phone, email, password, recoveryPhrase, plate, brand, model, onRegistered)
                     },
-                    enabled = listOf(first, last, phone, email, password, plate, brand, model).all { it.isNotBlank() } &&
-                        isStrongPassword(password) && phone.length >= 8,
+                    enabled = listOf(first, last, phone, email, password, recoveryPhrase, plate, brand, model).all { it.isNotBlank() } &&
+                        isStrongPassword(password) && isValidRecoveryPhrase(recoveryPhrase) && phone.length >= 8,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text("Registrar conductor")
@@ -801,6 +847,134 @@ private fun RoleGateScreen(
             Button(onClick = onError) { Text("Ir a inicio de sesión") }
         } else {
             CircularProgressIndicator()
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ForgotPasswordScreen(
+    authVm: AuthViewModel,
+    onBack: () -> Unit,
+    onVerified: () -> Unit,
+) {
+    var email by rememberSaveable { mutableStateOf("") }
+    var recoveryPhrase by rememberSaveable { mutableStateOf("") }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Recuperar contraseña") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás")
+                    }
+                },
+            )
+        },
+    ) { inner ->
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(inner)
+                .padding(24.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                "Ingresa el correo de tu cuenta y la palabra clave que definiste al registrarte.",
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            authVm.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            OutlinedTextField(
+                value = email,
+                onValueChange = { authVm.clearError(); email = it },
+                label = { Text("Correo") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+            )
+            OutlinedTextField(
+                value = recoveryPhrase,
+                onValueChange = { authVm.clearError(); recoveryPhrase = it.filter { ch -> !ch.isWhitespace() } },
+                label = { Text("Palabra clave de recuperación") },
+                supportingText = { Text("Debe coincidir con la que guardaste al crear la cuenta.") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            if (authVm.busy) {
+                CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
+            } else {
+                Button(
+                    onClick = { authVm.verifyRecoveryPhrase(email, recoveryPhrase, onVerified) },
+                    enabled = email.isNotBlank() && isValidRecoveryPhrase(recoveryPhrase),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Continuar")
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ResetPasswordScreen(
+    authVm: AuthViewModel,
+    onBack: () -> Unit,
+    onReset: () -> Unit,
+) {
+    var newPassword by rememberSaveable { mutableStateOf("") }
+    var confirmPassword by rememberSaveable { mutableStateOf("") }
+    val passwordsMatch = newPassword == confirmPassword
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Nueva contraseña") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás")
+                    }
+                },
+            )
+        },
+    ) { inner ->
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(inner)
+                .padding(24.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text("Elige una nueva contraseña para tu cuenta.", style = MaterialTheme.typography.bodyLarge)
+            authVm.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            PasswordTextField(
+                value = newPassword,
+                onValueChange = { authVm.clearError(); newPassword = it.filter { ch -> !ch.isWhitespace() } },
+                label = "Nueva contraseña",
+                supportingText = PASSWORD_HINT,
+            )
+            PasswordTextField(
+                value = confirmPassword,
+                onValueChange = { authVm.clearError(); confirmPassword = it.filter { ch -> !ch.isWhitespace() } },
+                label = "Confirmar contraseña",
+            )
+            if (!passwordsMatch && confirmPassword.isNotEmpty()) {
+                Text("Las contraseñas no coinciden.", color = MaterialTheme.colorScheme.error)
+            }
+            if (authVm.busy) {
+                CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
+            } else {
+                Button(
+                    onClick = { authVm.resetPassword(newPassword, onReset) },
+                    enabled = isStrongPassword(newPassword) && passwordsMatch,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Guardar contraseña")
+                }
+            }
         }
     }
 }

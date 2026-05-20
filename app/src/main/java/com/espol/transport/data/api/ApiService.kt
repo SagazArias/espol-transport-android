@@ -40,6 +40,12 @@ interface ApiService {
     @POST("auth/login")
     suspend fun login(@Body body: LoginRequest): TokenResponse
 
+    @POST("auth/password-recovery/verify")
+    suspend fun verifyPasswordRecovery(@Body body: com.espol.transport.data.model.PasswordRecoveryVerifyRequest): com.espol.transport.data.model.PasswordRecoveryVerifyResponse
+
+    @POST("auth/password-recovery/reset")
+    suspend fun resetPassword(@Body body: com.espol.transport.data.model.PasswordRecoveryResetRequest): com.espol.transport.data.model.PasswordRecoveryResetResponse
+
     @GET("auth/me")
     suspend fun me(): UserMe
 

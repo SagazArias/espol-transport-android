@@ -13,6 +13,8 @@ import com.espol.transport.data.local.TokenStore
 import com.espol.transport.data.model.DriverRegisterRequest
 import com.espol.transport.data.model.LoginRequest
 import com.espol.transport.data.model.PassengerRegisterRequest
+import com.espol.transport.data.model.PasswordRecoveryResetRequest
+import com.espol.transport.data.model.PasswordRecoveryVerifyRequest
 import com.espol.transport.data.model.PassengerSendOtpRequest
 import com.espol.transport.data.model.UserMe
 import com.espol.transport.ui.util.toUserMessage
@@ -26,6 +28,7 @@ class AuthViewModel(
     var busy by mutableStateOf(false)
         private set
     var errorMessage by mutableStateOf<String?>(null)
+    var pendingResetToken by mutableStateOf<String?>(null)
 
     fun clearError() {
         errorMessage = null
@@ -53,6 +56,7 @@ class AuthViewModel(
         phone: String,
         email: String,
         password: String,
+        recoveryPhrase: String,
         otp: String,
         onSuccess: () -> Unit,
     ) {
@@ -67,6 +71,7 @@ class AuthViewModel(
                         phone = phone.trim(),
                         email = email.trim().lowercase(),
                         password = password,
+                        recovery_phrase = recoveryPhrase,
                         otp_code = otp.trim(),
                     ),
                 )
@@ -85,6 +90,7 @@ class AuthViewModel(
         phone: String,
         email: String,
         password: String,
+        recoveryPhrase: String,
         plate: String,
         brand: String,
         model: String,
@@ -101,6 +107,7 @@ class AuthViewModel(
                         phone = phone.trim(),
                         email = email.trim().lowercase(),
                         password = password,
+                        recovery_phrase = recoveryPhrase,
                         plate = plate.trim(),
                         brand = brand.trim(),
                         model = model.trim(),
@@ -116,6 +123,48 @@ class AuthViewModel(
     }
 
     suspend fun hasPersistedSession(): Boolean = tokenStore.shouldAutoLogin()
+
+    fun verifyRecoveryPhrase(email: String, recoveryPhrase: String, onSuccess: () -> Unit) {
+        busy = true
+        errorMessage = null
+        viewModelScope.launch {
+            try {
+                val res = api.verifyPasswordRecovery(
+                    PasswordRecoveryVerifyRequest(
+                        email = email.trim().lowercase(),
+                        recovery_phrase = recoveryPhrase,
+                    ),
+                )
+                pendingResetToken = res.reset_token
+                onSuccess()
+            } catch (e: Exception) {
+                errorMessage = e.toUserMessage()
+            } finally {
+                busy = false
+            }
+        }
+    }
+
+    fun resetPassword(newPassword: String, onSuccess: () -> Unit) {
+        val token = pendingResetToken
+        if (token.isNullOrBlank()) {
+            errorMessage = "Sesión de recuperación expirada. Vuelve a ingresar tu palabra clave."
+            return
+        }
+        busy = true
+        errorMessage = null
+        viewModelScope.launch {
+            try {
+                api.resetPassword(PasswordRecoveryResetRequest(reset_token = token, new_password = newPassword))
+                pendingResetToken = null
+                onSuccess()
+            } catch (e: Exception) {
+                errorMessage = e.toUserMessage()
+            } finally {
+                busy = false
+            }
+        }
+    }
 
     fun login(email: String, password: String, stayLoggedIn: Boolean, onSuccess: () -> Unit) {
         busy = true
