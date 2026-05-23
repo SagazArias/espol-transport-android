@@ -1,35 +1,37 @@
 package com.espol.transport.data.api
 
-import com.espol.transport.data.model.LoginRequest
-import com.espol.transport.data.model.OtpSentResponse
-import com.espol.transport.data.model.PassengerRegisterRequest
-import com.espol.transport.data.model.PassengerSendOtpRequest
-import com.espol.transport.data.model.DriverRegisterRequest
-import com.espol.transport.data.model.TokenResponse
+import com.espol.transport.data.model.AccountDeleteRequest
 import com.espol.transport.data.model.AllowedFaresOut
 import com.espol.transport.data.model.DriverBookingNotification
-import com.espol.transport.data.model.InboxOut
-import com.espol.transport.data.model.TripBookingCancelIn
-import com.espol.transport.data.model.TripBookingCompleteOut
-import com.espol.transport.data.model.TripBookingRateIn
+import com.espol.transport.data.model.DriverRegisterRequest
 import com.espol.transport.data.model.DriverWeeklyScheduleIn
 import com.espol.transport.data.model.DriverWeeklyScheduleOut
+import com.espol.transport.data.model.InboxOut
+import com.espol.transport.data.model.LoginRequest
 import com.espol.transport.data.model.PassengerMatchResponse
 import com.espol.transport.data.model.PassengerMatchSearch
+import com.espol.transport.data.model.PassengerRegisterRequest
+import com.espol.transport.data.model.PasswordRecoveryResetRequest
+import com.espol.transport.data.model.PasswordRecoveryResetResponse
+import com.espol.transport.data.model.PasswordRecoveryVerifyRequest
+import com.espol.transport.data.model.PasswordRecoveryVerifyResponse
+import com.espol.transport.data.model.TokenResponse
+import com.espol.transport.data.model.TripBookingCancelIn
+import com.espol.transport.data.model.TripBookingCompleteOut
 import com.espol.transport.data.model.TripBookingCreate
+import com.espol.transport.data.model.TripBookingRateIn
 import com.espol.transport.data.model.TripTimesOut
 import com.espol.transport.data.model.UserMe
 import com.espol.transport.data.model.ZoneResolveRequest
 import com.espol.transport.data.model.ZoneResolveResponse
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.PUT
+import retrofit2.http.Path
 
 interface ApiService {
-
-    @POST("auth/passenger/send-otp")
-    suspend fun sendPassengerOtp(@Body body: PassengerSendOtpRequest): OtpSentResponse
 
     @POST("auth/passenger/register")
     suspend fun registerPassenger(@Body body: PassengerRegisterRequest): UserMe
@@ -41,10 +43,13 @@ interface ApiService {
     suspend fun login(@Body body: LoginRequest): TokenResponse
 
     @POST("auth/password-recovery/verify")
-    suspend fun verifyPasswordRecovery(@Body body: com.espol.transport.data.model.PasswordRecoveryVerifyRequest): com.espol.transport.data.model.PasswordRecoveryVerifyResponse
+    suspend fun verifyPasswordRecovery(@Body body: PasswordRecoveryVerifyRequest): PasswordRecoveryVerifyResponse
 
     @POST("auth/password-recovery/reset")
-    suspend fun resetPassword(@Body body: com.espol.transport.data.model.PasswordRecoveryResetRequest): com.espol.transport.data.model.PasswordRecoveryResetResponse
+    suspend fun resetPassword(@Body body: PasswordRecoveryResetRequest): PasswordRecoveryResetResponse
+
+    @DELETE("auth/me")
+    suspend fun deleteAccount(@Body body: AccountDeleteRequest)
 
     @GET("auth/me")
     suspend fun me(): UserMe
@@ -74,11 +79,11 @@ interface ApiService {
     suspend fun createBooking(@Body body: TripBookingCreate): DriverBookingNotification
 
     @POST("bookings/{id}/cancel")
-    suspend fun cancelBooking(@retrofit2.http.Path("id") id: String, @Body body: TripBookingCancelIn): InboxOut
+    suspend fun cancelBooking(@Path("id") id: String, @Body body: TripBookingCancelIn): InboxOut
 
     @POST("bookings/{id}/complete")
-    suspend fun completeBooking(@retrofit2.http.Path("id") id: String): TripBookingCompleteOut
+    suspend fun completeBooking(@Path("id") id: String): TripBookingCompleteOut
 
     @POST("bookings/{id}/rate")
-    suspend fun rateBooking(@retrofit2.http.Path("id") id: String, @Body body: TripBookingRateIn): Unit
+    suspend fun rateBooking(@Path("id") id: String, @Body body: TripBookingRateIn)
 }

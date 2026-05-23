@@ -1,13 +1,5 @@
 package com.espol.transport.data.model
 
-data class PassengerSendOtpRequest(val email: String)
-
-data class OtpSentResponse(
-    val message: String,
-    val expires_in_minutes: Int,
-    val dev_code: String? = null,
-)
-
 data class PassengerRegisterRequest(
     val first_name: String,
     val last_name: String,
@@ -15,7 +7,6 @@ data class PassengerRegisterRequest(
     val email: String,
     val password: String,
     val recovery_phrase: String,
-    val otp_code: String,
 )
 
 data class DriverRegisterRequest(
@@ -29,6 +20,12 @@ data class DriverRegisterRequest(
     val brand: String,
     val model: String,
 )
+
+data class LoginRequest(val email: String, val password: String)
+
+data class TokenResponse(val access_token: String, val token_type: String)
+
+data class AccountDeleteRequest(val password: String)
 
 data class PasswordRecoveryVerifyRequest(
     val email: String,
@@ -46,10 +43,6 @@ data class PasswordRecoveryResetRequest(
 )
 
 data class PasswordRecoveryResetResponse(val message: String)
-
-data class LoginRequest(val email: String, val password: String)
-
-data class TokenResponse(val access_token: String, val token_type: String)
 
 data class UserMe(
     val id: String,

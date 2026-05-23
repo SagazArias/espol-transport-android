@@ -42,22 +42,28 @@ import androidx.compose.ui.unit.dp
 import com.espol.transport.data.model.InboxAlert
 import com.espol.transport.data.model.TripBookingCompleteOut
 import com.espol.transport.data.model.TripInboxItem
+import com.espol.transport.ui.components.DeleteAccountDialog
+import com.espol.transport.ui.viewmodel.AuthViewModel
 import com.espol.transport.ui.viewmodel.TransportViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InboxScreen(
     transportVm: TransportViewModel,
+    authVm: AuthViewModel,
     userName: String,
     isDriver: Boolean,
     onPrimaryAction: () -> Unit,
     onLogout: () -> Unit,
+    onAccountDeleted: () -> Unit,
 ) {
     var refreshKey by remember { mutableStateOf(0) }
     var cancelTarget by remember { mutableStateOf<TripInboxItem?>(null) }
     var cancelReason by remember { mutableStateOf("") }
     var ratingBookingId by remember { mutableStateOf<String?>(null) }
     var ratingStars by remember { mutableIntStateOf(0) }
+    var showDeleteAccount by remember { mutableStateOf(false) }
+    var deletePassword by remember { mutableStateOf("") }
 
     LaunchedEffect(refreshKey) {
         transportVm.loadInbox()
@@ -95,6 +101,28 @@ fun InboxScreen(
             },
             dismissButton = {
                 TextButton(onClick = { cancelTarget = null; cancelReason = "" }) { Text("Volver") }
+            },
+        )
+    }
+
+    if (showDeleteAccount) {
+        DeleteAccountDialog(
+            password = deletePassword,
+            onPasswordChange = { deletePassword = it.filter { ch -> !ch.isWhitespace() } },
+            busy = authVm.busy,
+            onConfirm = {
+                authVm.deleteAccount(deletePassword) {
+                    showDeleteAccount = false
+                    deletePassword = ""
+                    onAccountDeleted()
+                }
+            },
+            onDismiss = {
+                if (!authVm.busy) {
+                    showDeleteAccount = false
+                    deletePassword = ""
+                    authVm.clearError()
+                }
             },
         )
     }
@@ -196,6 +224,16 @@ fun InboxScreen(
 
             transportVm.errorMessage?.let {
                 Text(it, color = MaterialTheme.colorScheme.error)
+            }
+            authVm.errorMessage?.let {
+                Text(it, color = MaterialTheme.colorScheme.error)
+            }
+            HorizontalDivider()
+            OutlinedButton(
+                onClick = { authVm.clearError(); showDeleteAccount = true },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Eliminar mi cuenta", color = MaterialTheme.colorScheme.error)
             }
             Spacer(Modifier.height(16.dp))
         }

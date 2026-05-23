@@ -24,6 +24,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -41,6 +42,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.espol.transport.data.model.DriverDayPlanIn
+import com.espol.transport.ui.components.DeleteAccountDialog
+import com.espol.transport.ui.viewmodel.AuthViewModel
 import com.espol.transport.ui.viewmodel.TransportViewModel
 
 private val WEEKDAYS_MON_FRI = listOf(
@@ -64,10 +67,36 @@ class DayScheduleUi(val weekday: Int) {
 @Composable
 fun DriverScheduleScreen(
     transportVm: TransportViewModel,
+    authVm: AuthViewModel,
     userName: String,
     onBack: () -> Unit,
     onLogout: () -> Unit,
+    onAccountDeleted: () -> Unit,
 ) {
+    var showDeleteAccount by remember { mutableStateOf(false) }
+    var deletePassword by remember { mutableStateOf("") }
+
+    if (showDeleteAccount) {
+        DeleteAccountDialog(
+            password = deletePassword,
+            onPasswordChange = { deletePassword = it.filter { ch -> !ch.isWhitespace() } },
+            busy = authVm.busy,
+            onConfirm = {
+                authVm.deleteAccount(deletePassword) {
+                    showDeleteAccount = false
+                    deletePassword = ""
+                    onAccountDeleted()
+                }
+            },
+            onDismiss = {
+                if (!authVm.busy) {
+                    showDeleteAccount = false
+                    deletePassword = ""
+                    authVm.clearError()
+                }
+            },
+        )
+    }
     var homeSector by rememberSaveable { mutableStateOf("") }
     var seatCapacity by rememberSaveable { mutableStateOf("3") }
     var selectedFare by rememberSaveable { mutableStateOf(1.50) }
@@ -169,6 +198,9 @@ fun DriverScheduleScreen(
             transportVm.errorMessage?.let {
                 Text(it, color = MaterialTheme.colorScheme.error)
             }
+            authVm.errorMessage?.let {
+                Text(it, color = MaterialTheme.colorScheme.error)
+            }
             savedMessage?.let {
                 Text(it, color = MaterialTheme.colorScheme.primary)
             }
@@ -205,6 +237,13 @@ fun DriverScheduleScreen(
                 ) {
                     Text("Guardar / actualizar horario")
                 }
+            }
+            HorizontalDivider()
+            OutlinedButton(
+                onClick = { authVm.clearError(); showDeleteAccount = true },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Eliminar mi cuenta", color = MaterialTheme.colorScheme.error)
             }
             Spacer(Modifier.height(24.dp))
         }

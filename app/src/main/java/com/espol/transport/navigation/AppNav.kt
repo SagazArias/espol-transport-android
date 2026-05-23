@@ -48,7 +48,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.espol.transport.AppContainer
-import com.espol.transport.BuildConfig
 import com.espol.transport.data.model.UserMe
 import com.espol.transport.ui.util.PASSWORD_HINT
 import com.espol.transport.ui.util.RECOVERY_PHRASE_HINT
@@ -71,7 +70,6 @@ private object Routes {
     const val Login = "login"
     const val ForgotPassword = "forgot_password"
     const val ResetPassword = "reset_password"
-    const val PassengerOtp = "passenger_otp"
     const val PassengerRegister = "passenger_register"
     const val DriverRegister = "driver_register"
     const val RoleGate = "role_gate"
@@ -92,8 +90,6 @@ fun AppNav(container: AppContainer) {
     val authVm: AuthViewModel = viewModel(factory = authVmFactory)
     val transportVm: TransportViewModel = viewModel(factory = transportVmFactory)
 
-    var pendingPassengerEmail by rememberSaveable { mutableStateOf("") }
-    var pendingPassengerOtp by rememberSaveable { mutableStateOf("") }
     var loginExpectedRole by rememberSaveable { mutableStateOf<String?>(null) }
     var isDriverInbox by rememberSaveable { mutableStateOf(false) }
 
@@ -139,7 +135,7 @@ fun AppNav(container: AppContainer) {
             composable(Routes.RegisterRolePick) {
                 RegisterRolePickScreen(
                     onBack = { nav.popBackStack() },
-                    onPassenger = { nav.navigate(Routes.PassengerOtp) },
+                    onPassenger = { nav.navigate(Routes.PassengerRegister) },
                     onDriver = { nav.navigate(Routes.DriverRegister) },
                 )
             }
@@ -175,22 +171,9 @@ fun AppNav(container: AppContainer) {
                     },
                 )
             }
-            composable(Routes.PassengerOtp) {
-                PassengerOtpScreen(
-                    authVm = authVm,
-                    onBack = { nav.popBackStack() },
-                    onCodeSent = { email, devCode ->
-                        pendingPassengerEmail = email
-                        pendingPassengerOtp = devCode.orEmpty()
-                        nav.navigate(Routes.PassengerRegister)
-                    },
-                )
-            }
             composable(Routes.PassengerRegister) {
                 PassengerRegisterScreen(
                     authVm = authVm,
-                    initialEmail = pendingPassengerEmail,
-                    initialOtp = pendingPassengerOtp,
                     onBack = { nav.popBackStack() },
                     onRegistered = {
                         scope.launch {
@@ -245,6 +228,7 @@ fun AppNav(container: AppContainer) {
                 val name = transportVm.currentUser?.full_name ?: "Usuario"
                 InboxScreen(
                     transportVm = transportVm,
+                    authVm = authVm,
                     userName = name,
                     isDriver = isDriverInbox,
                     onPrimaryAction = {
@@ -252,6 +236,10 @@ fun AppNav(container: AppContainer) {
                         else nav.navigate(Routes.PassengerSearch)
                     },
                     onLogout = { logout(authVm, nav) },
+                    onAccountDeleted = {
+                        scope.launch { snack.showSnackbar("Cuenta eliminada.") }
+                        logout(authVm, nav)
+                    },
                 )
             }
             composable(Routes.PassengerSearch) {
@@ -287,9 +275,14 @@ fun AppNav(container: AppContainer) {
                 val name = transportVm.currentUser?.full_name ?: "Conductor"
                 DriverScheduleScreen(
                     transportVm = transportVm,
+                    authVm = authVm,
                     userName = name,
                     onBack = { nav.popBackStack() },
                     onLogout = { logout(authVm, nav) },
+                    onAccountDeleted = {
+                        scope.launch { snack.showSnackbar("Cuenta eliminada.") }
+                        logout(authVm, nav)
+                    },
                 )
             }
         }
@@ -532,74 +525,8 @@ private fun LoginScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PassengerOtpScreen(
-    authVm: AuthViewModel,
-    onBack: () -> Unit,
-    onCodeSent: (email: String, devCode: String?) -> Unit,
-) {
-    var email by rememberSaveable { mutableStateOf("") }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Verificación ESPOL") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás")
-                    }
-                },
-            )
-        },
-    ) { inner ->
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(inner)
-                .padding(24.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(
-                "Usa tu correo institucional (@espol.edu.ec). Te enviaremos un código de 6 dígitos.",
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            authVm.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            OutlinedTextField(
-                value = email,
-                onValueChange = { authVm.clearError(); email = it },
-                label = { Text("Correo @espol.edu.ec") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-            )
-            if (authVm.busy) {
-                CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
-            } else {
-                Button(
-                    onClick = {
-                        if (!email.endsWith("@espol.edu.ec", ignoreCase = true)) {
-                            return@Button
-                        }
-                        authVm.sendPassengerOtp(email) { devCode ->
-                            onCodeSent(email.trim().lowercase(), devCode)
-                        }
-                    },
-                    enabled = email.endsWith("@espol.edu.ec", ignoreCase = true),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text("Enviar código")
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
 private fun PassengerRegisterScreen(
     authVm: AuthViewModel,
-    initialEmail: String,
-    initialOtp: String,
     onBack: () -> Unit,
     onRegistered: () -> Unit,
 ) {
@@ -608,17 +535,9 @@ private fun PassengerRegisterScreen(
     var phone by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
+    var confirmPassword by rememberSaveable { mutableStateOf("") }
     var recoveryPhrase by rememberSaveable { mutableStateOf("") }
-    var otp by rememberSaveable { mutableStateOf("") }
-
-    LaunchedEffect(initialEmail, initialOtp) {
-        if (initialEmail.isNotBlank()) {
-            email = initialEmail
-        }
-        if (initialOtp.isNotBlank()) {
-            otp = initialOtp
-        }
-    }
+    val passwordsMatch = password == confirmPassword
 
     Scaffold(
         topBar = {
@@ -640,14 +559,12 @@ private fun PassengerRegisterScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            Text(
+                "Registro solo con correo institucional @espol.edu.ec. Un correo = una cuenta.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             authVm.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            if (BuildConfig.DEBUG && initialOtp.isNotBlank()) {
-                Text(
-                    "Código de prueba aplicado (solo compilación debug). En producción revisa tu correo @espol.edu.ec.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
             OutlinedTextField(
                 value = first,
                 onValueChange = { authVm.clearError(); first = it },
@@ -672,10 +589,11 @@ private fun PassengerRegisterScreen(
             )
             OutlinedTextField(
                 value = email,
-                onValueChange = { },
-                readOnly = true,
-                label = { Text("Correo institucional") },
+                onValueChange = { authVm.clearError(); email = it.trim().lowercase() },
+                label = { Text("Correo @espol.edu.ec") },
+                singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             )
             PasswordTextField(
                 value = password,
@@ -683,6 +601,14 @@ private fun PassengerRegisterScreen(
                 label = "Contraseña",
                 supportingText = PASSWORD_HINT,
             )
+            PasswordTextField(
+                value = confirmPassword,
+                onValueChange = { authVm.clearError(); confirmPassword = it.filter { ch -> !ch.isWhitespace() } },
+                label = "Vuelva a escribir su contraseña",
+            )
+            if (!passwordsMatch && confirmPassword.isNotEmpty()) {
+                Text("Las contraseñas no coinciden.", color = MaterialTheme.colorScheme.error)
+            }
             OutlinedTextField(
                 value = recoveryPhrase,
                 onValueChange = { authVm.clearError(); recoveryPhrase = it.filter { ch -> !ch.isWhitespace() } },
@@ -691,24 +617,17 @@ private fun PassengerRegisterScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            OutlinedTextField(
-                value = otp,
-                onValueChange = { if (it.length <= 6) otp = it.filter { ch -> ch.isDigit() } },
-                label = { Text("Código de 6 dígitos") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            )
             if (authVm.busy) {
                 CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
             } else {
                 Button(
                     onClick = {
-                        authVm.registerPassenger(first, last, phone, email, password, recoveryPhrase, otp, onRegistered)
+                        authVm.registerPassenger(first, last, phone, email, password, recoveryPhrase, onRegistered)
                     },
                     enabled = first.isNotBlank() && last.isNotBlank() && phone.length >= 8 &&
-                        isStrongPassword(password) && isValidRecoveryPhrase(recoveryPhrase) &&
-                        otp.length == 6 && email.endsWith("@espol.edu.ec", ignoreCase = true),
+                        isStrongPassword(password) && passwordsMatch && confirmPassword.isNotBlank() &&
+                        isValidRecoveryPhrase(recoveryPhrase) &&
+                        email.endsWith("@espol.edu.ec", ignoreCase = true),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text("Crear cuenta")
@@ -730,8 +649,10 @@ private fun DriverRegisterScreen(
     var phone by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
+    var confirmPassword by rememberSaveable { mutableStateOf("") }
     var recoveryPhrase by rememberSaveable { mutableStateOf("") }
     var plate by rememberSaveable { mutableStateOf("") }
+    val passwordsMatch = password == confirmPassword
     var brand by rememberSaveable { mutableStateOf("") }
     var model by rememberSaveable { mutableStateOf("") }
     Scaffold(
@@ -755,7 +676,7 @@ private fun DriverRegisterScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
-                "Completa tus datos y los del vehículo. Podrás publicar rutas después de iniciar sesión.",
+                "Completa tus datos y los del vehículo. Un correo = una cuenta.",
                 style = MaterialTheme.typography.bodyMedium,
             )
             authVm.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
@@ -783,6 +704,14 @@ private fun DriverRegisterScreen(
                 label = "Contraseña",
                 supportingText = PASSWORD_HINT,
             )
+            PasswordTextField(
+                value = confirmPassword,
+                onValueChange = { authVm.clearError(); confirmPassword = it.filter { ch -> !ch.isWhitespace() } },
+                label = "Vuelva a escribir su contraseña",
+            )
+            if (!passwordsMatch && confirmPassword.isNotEmpty()) {
+                Text("Las contraseñas no coinciden.", color = MaterialTheme.colorScheme.error)
+            }
             OutlinedTextField(
                 value = recoveryPhrase,
                 onValueChange = { authVm.clearError(); recoveryPhrase = it.filter { ch -> !ch.isWhitespace() } },
@@ -801,8 +730,8 @@ private fun DriverRegisterScreen(
                     onClick = {
                         authVm.registerDriver(first, last, phone, email, password, recoveryPhrase, plate, brand, model, onRegistered)
                     },
-                    enabled = listOf(first, last, phone, email, password, recoveryPhrase, plate, brand, model).all { it.isNotBlank() } &&
-                        isStrongPassword(password) && isValidRecoveryPhrase(recoveryPhrase) && phone.length >= 8,
+                    enabled = listOf(first, last, phone, email, password, confirmPassword, recoveryPhrase, plate, brand, model).all { it.isNotBlank() } &&
+                        isStrongPassword(password) && passwordsMatch && isValidRecoveryPhrase(recoveryPhrase) && phone.length >= 8,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text("Registrar conductor")

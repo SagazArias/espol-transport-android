@@ -7,15 +7,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.espol.transport.AppContainer
-import com.espol.transport.BuildConfig
 import com.espol.transport.data.api.ApiService
 import com.espol.transport.data.local.TokenStore
+import com.espol.transport.data.model.AccountDeleteRequest
 import com.espol.transport.data.model.DriverRegisterRequest
 import com.espol.transport.data.model.LoginRequest
 import com.espol.transport.data.model.PassengerRegisterRequest
 import com.espol.transport.data.model.PasswordRecoveryResetRequest
 import com.espol.transport.data.model.PasswordRecoveryVerifyRequest
-import com.espol.transport.data.model.PassengerSendOtpRequest
 import com.espol.transport.data.model.UserMe
 import com.espol.transport.ui.util.toUserMessage
 import kotlinx.coroutines.launch
@@ -34,22 +33,6 @@ class AuthViewModel(
         errorMessage = null
     }
 
-    fun sendPassengerOtp(email: String, onSuccess: (devCode: String?) -> Unit) {
-        busy = true
-        errorMessage = null
-        viewModelScope.launch {
-            try {
-                val res = api.sendPassengerOtp(PassengerSendOtpRequest(email.trim().lowercase()))
-                val devCode = if (BuildConfig.DEBUG) res.dev_code else null
-                onSuccess(devCode)
-            } catch (e: Exception) {
-                errorMessage = e.toUserMessage()
-            } finally {
-                busy = false
-            }
-        }
-    }
-
     fun registerPassenger(
         firstName: String,
         lastName: String,
@@ -57,7 +40,6 @@ class AuthViewModel(
         email: String,
         password: String,
         recoveryPhrase: String,
-        otp: String,
         onSuccess: () -> Unit,
     ) {
         busy = true
@@ -72,7 +54,6 @@ class AuthViewModel(
                         email = email.trim().lowercase(),
                         password = password,
                         recovery_phrase = recoveryPhrase,
-                        otp_code = otp.trim(),
                     ),
                 )
                 onSuccess()
@@ -173,6 +154,22 @@ class AuthViewModel(
             try {
                 val token = api.login(LoginRequest(email.trim().lowercase(), password))
                 tokenStore.saveToken(token.access_token, stayLoggedIn)
+                onSuccess()
+            } catch (e: Exception) {
+                errorMessage = e.toUserMessage()
+            } finally {
+                busy = false
+            }
+        }
+    }
+
+    fun deleteAccount(password: String, onSuccess: () -> Unit) {
+        busy = true
+        errorMessage = null
+        viewModelScope.launch {
+            try {
+                api.deleteAccount(AccountDeleteRequest(password))
+                tokenStore.clear()
                 onSuccess()
             } catch (e: Exception) {
                 errorMessage = e.toUserMessage()
