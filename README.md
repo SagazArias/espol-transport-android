@@ -93,7 +93,7 @@ UI (Composables)  ──>  ViewModels  ──>  ApiService (Retrofit)  ──>  
 
 ## Decisiones técnicas
 
-- **URL de la API en tiempo de build**: `app/build.gradle.kts` lee `api.base.url` de `local.properties`, le agrega la `/` final si falta y la expone como `BuildConfig.API_BASE_URL`. Por defecto usa `http://10.0.2.2:8000/` (localhost del PC visto desde el emulador). Así no hay URLs ni IPs en el código fuente.
+- **URL de la API en tiempo de build**: `app/build.gradle.kts` lee `api.base.url` de `local.properties`, le agrega la `/` final si falta y la expone como `BuildConfig.API_BASE_URL`. Por defecto usa la API desplegada en Render, `https://espol-transport.onrender.com/`. Así no hay URLs ni IPs en el código fuente.
 - **Validación en el cliente, igual que en el servidor**:
   - Contraseña (`PasswordPolicy.kt`): 8 a 128 caracteres, con mayúscula, minúscula, número y símbolo, sin espacios.
   - Frase de recuperación (`RecoveryPhrasePolicy.kt`): 4 a 64 caracteres sin espacios; es distinta de la contraseña.
@@ -108,7 +108,7 @@ UI (Composables)  ──>  ViewModels  ──>  ApiService (Retrofit)  ──>  
 - Android Studio reciente (compatible con AGP 8.13) y JDK 17.
 - Android SDK 35.
 - Emulador o dispositivo con Android 8.0 (API 26) o superior.
-- El backend [`espol-transport-api`](https://github.com/SagazArias/espol-transport-api) corriendo y accesible desde el dispositivo.
+- Conexión a internet: por defecto la app usa la API desplegada en `https://espol-transport.onrender.com/`. Para desarrollo, también puedes levantar el backend [`espol-transport-api`](https://github.com/SagazArias/espol-transport-api) en tu PC.
 
 ## Cómo ejecutarlo
 
@@ -119,16 +119,17 @@ UI (Composables)  ──>  ViewModels  ──>  ApiService (Retrofit)  ──>  
    cd espol-transport-android
    ```
 
-2. **Configurar la URL de la API**: copia `local.properties.example` a `local.properties` (o agrega la línea a tu `local.properties`, que Android Studio genera con `sdk.dir`).
+2. **URL de la API (opcional)**: sin configurar nada, la app usa la API desplegada en `https://espol-transport.onrender.com/`. El plan gratuito de Render se duerme cuando no se usa, así que la primera petición puede tardar 30–60 s. Para usar un backend local, copia `local.properties.example` a `local.properties` (o agrega la línea a tu `local.properties`, que Android Studio genera con `sdk.dir`):
 
    ```properties
    # Teléfono físico en la misma red Wi-Fi: IPv4 del PC (ipconfig / ifconfig)
    api.base.url=http://192.168.x.x:8000/
 
-   # Emulador: omite la línea y se usará http://10.0.2.2:8000/
+   # Emulador
+   api.base.url=http://10.0.2.2:8000/
    ```
 
-3. **Levantar el backend** en el PC, escuchando en todas las interfaces para que el teléfono lo alcance (ver el README de la API), por ejemplo:
+3. **Solo con backend local: levántalo** en el PC, escuchando en todas las interfaces para que el teléfono lo alcance (ver el README de la API), por ejemplo:
 
    ```bash
    uvicorn app.main:app --host 0.0.0.0 --port 8000

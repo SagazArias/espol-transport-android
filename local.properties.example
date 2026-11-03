@@ -1,9 +1,11 @@
 # Copia a local.properties (o añade estas líneas a tu local.properties existente).
 # sdk.dir=...  (Android Studio ya lo genera)
 
-# URL del backend en tu PC (misma red Wi‑Fi que el teléfono).
-# Sustituye 192.168.100.7 por la IPv4 de tu PC (ipconfig en PowerShell).
-api.base.url=http://192.168.100.7:8000/
+# Sin api.base.url, la app usa la API desplegada: https://espol-transport.onrender.com/
 
-# Emulador Android (no uses esta IP en teléfono físico):
+# Backend local en tu PC, desde un teléfono físico (misma red Wi‑Fi).
+# Sustituye 192.168.x.x por la IPv4 de tu PC (ipconfig en PowerShell).
+# api.base.url=http://192.168.x.x:8000/
+
+# Backend local desde el emulador Android (10.0.2.2 = localhost del PC):
 # api.base.url=http://10.0.2.2:8000/

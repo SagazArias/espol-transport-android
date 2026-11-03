@@ -12,10 +12,10 @@ val localProperties = Properties().apply {
     }
 }
 
-// Emulador: 10.0.2.2 = localhost del PC. Teléfono físico: IP de tu PC en Wi‑Fi (ver local.properties).
+// Por defecto, la API desplegada en Render. Para desarrollo local, define api.base.url en local.properties.
 val apiBaseUrl: String = localProperties.getProperty("api.base.url")?.trim()?.let { url ->
     if (url.endsWith("/")) url else "$url/"
-} ?: "http://10.0.2.2:8000/"
+} ?: "https://espol-transport.onrender.com/"
 
 android {
     namespace = "com.espol.transport"
