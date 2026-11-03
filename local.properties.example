@@ -6,4 +6,4 @@
 api.base.url=http://192.168.100.7:8000/
 
 # Emulador Android (no uses esta IP en teléfono físico):
-# api.base.url=http://192.168.100.7:8000/
+# api.base.url=http://10.0.2.2:8000/
