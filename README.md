@@ -189,3 +189,7 @@ app/src/main/
 - Notificaciones push para nuevas reservas y cancelaciones.
 - Mapa para elegir sectores en lugar de texto libre.
 - Inyección de dependencias con Hilt y una capa de repositorios si el proyecto crece.
+
+## Licencia
+
+Distribuido bajo la licencia MIT. Copyright (c) 2026 Samuel Arias. Ver [LICENSE](LICENSE).
