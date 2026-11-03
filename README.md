@@ -145,8 +145,19 @@ UI (Composables)  ──>  ViewModels  ──>  ApiService (Retrofit)  ──>  
 
    ```bash
    ./gradlew assembleDebug       # app/build/outputs/apk/debug/app-debug.apk
-   ./gradlew assembleRelease     # requiere configurar firma
+   ./gradlew assembleRelease     # app/build/outputs/apk/release/app-release.apk
    ```
+
+   Para firmar el release, crea `keystore.properties` en la raíz (está en `.gitignore`, igual que los `.jks`):
+
+   ```properties
+   storeFile=mi-clave.jks
+   storePassword=...
+   keyAlias=...
+   keyPassword=...
+   ```
+
+   Sin ese archivo, `assembleRelease` genera un APK sin firmar.
 
 > Si cambias `api.base.url`, vuelve a compilar: el valor queda fijado en `BuildConfig`.
 

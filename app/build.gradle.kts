@@ -12,6 +12,14 @@ val localProperties = Properties().apply {
     }
 }
 
+// Firma de release: keystore.properties en la raíz (ignorado por git). Sin él, el release sale sin firmar.
+val keystoreProperties = Properties().apply {
+    val file = rootProject.file("keystore.properties")
+    if (file.exists()) {
+        file.inputStream().use { load(it) }
+    }
+}
+
 // Por defecto, la API desplegada en Render. Para desarrollo local, define api.base.url en local.properties.
 val apiBaseUrl: String = localProperties.getProperty("api.base.url")?.trim()?.let { url ->
     if (url.endsWith("/")) url else "$url/"
@@ -31,8 +39,20 @@ android {
         vectorDrawables { useSupportLibrary = true }
     }
 
+    signingConfigs {
+        if (keystoreProperties.containsKey("storeFile")) {
+            create("release") {
+                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
