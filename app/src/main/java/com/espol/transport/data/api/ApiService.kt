@@ -22,6 +22,7 @@ import com.espol.transport.data.model.TripBookingCreate
 import com.espol.transport.data.model.TripBookingRateIn
 import com.espol.transport.data.model.TripTimesOut
 import com.espol.transport.data.model.UserMe
+import com.espol.transport.data.model.ZoneOut
 import com.espol.transport.data.model.ZoneResolveRequest
 import com.espol.transport.data.model.ZoneResolveResponse
 import retrofit2.http.Body
@@ -62,6 +63,9 @@ interface ApiService {
 
     @GET("bookings/inbox")
     suspend fun getInbox(): InboxOut
+
+    @GET("zones")
+    suspend fun listZones(): List<ZoneOut>
 
     @POST("zones/resolve")
     suspend fun resolveZone(@Body body: ZoneResolveRequest): ZoneResolveResponse
