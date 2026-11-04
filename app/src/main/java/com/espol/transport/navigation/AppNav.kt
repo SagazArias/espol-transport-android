@@ -12,9 +12,12 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -47,6 +50,7 @@ import com.espol.transport.ui.util.toUserMessage
 import com.espol.transport.ui.viewmodel.AuthViewModel
 import com.espol.transport.ui.viewmodel.TransportViewModel
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
 
 private object Routes {
     const val Bootstrap = "bootstrap"
@@ -199,7 +203,7 @@ fun AppNav(container: AppContainer) {
                             popUpTo(Routes.RoleGate) { inclusive = true }
                         }
                     },
-                    onError = { nav.popBackStack() },
+                    onError = { logout(authVm, nav) },
                 )
             }
             composable(Routes.Inbox) {
@@ -290,8 +294,10 @@ private fun RoleGateScreen(
     onError: () -> Unit,
 ) {
     var loadError by remember { mutableStateOf<String?>(null) }
+    var attempt by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(attempt) {
+        loadError = null
         try {
             val me = authVm.fetchMe()
             transportVm.currentUser = me
@@ -301,7 +307,9 @@ private fun RoleGateScreen(
                 else -> loadError = "Rol de usuario no reconocido."
             }
         } catch (e: Exception) {
-            authVm.logout { }
+            // Solo un token rechazado cierra la sesión. Un timeout (p. ej. la API despertando en Render)
+            // no debe borrar la sesión guardada: se ofrece reintentar.
+            if (e is HttpException && e.code() in setOf(401, 403)) authVm.logout { }
             loadError = e.toUserMessage()
         }
     }
@@ -316,7 +324,8 @@ private fun RoleGateScreen(
     ) {
         if (loadError != null) {
             InlineMessage(loadError)
-            PrimaryButton("Ir a inicio de sesión", onClick = onError)
+            PrimaryButton("Reintentar", onClick = { attempt++ })
+            TextButton(onClick = onError) { Text("Ir a inicio de sesión") }
         } else {
             CircularProgressIndicator()
         }

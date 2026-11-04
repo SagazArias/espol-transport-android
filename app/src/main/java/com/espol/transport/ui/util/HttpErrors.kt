@@ -2,6 +2,8 @@ package com.espol.transport.ui.util
 
 import com.google.gson.JsonParser
 import retrofit2.HttpException
+import java.io.IOException
+import java.net.SocketTimeoutException
 
 fun Throwable.toUserMessage(): String {
     if (this is HttpException) {
@@ -21,7 +23,12 @@ fun Throwable.toUserMessage(): String {
             else -> "Error del servidor (${code()})"
         }
     }
-    return localizedMessage ?: "No se pudo conectar. Revisa la URL de la API y tu red."
+    return when (this) {
+        // El servidor gratuito de Render se duerme y tarda en despertar: no es un error del usuario.
+        is SocketTimeoutException -> "El servidor tardó en responder. Puede estar iniciando; intenta de nuevo en unos segundos."
+        is IOException -> "Sin conexión con el servidor. Revisa tu internet e intenta de nuevo."
+        else -> localizedMessage ?: "Ocurrió un error inesperado."
+    }
 }
 
 private fun parseApiDetail(raw: String): String? {
