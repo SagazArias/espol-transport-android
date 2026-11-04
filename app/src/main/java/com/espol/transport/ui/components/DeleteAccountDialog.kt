@@ -33,6 +33,7 @@ fun DeleteAccountDialog(
                     value = password,
                     onValueChange = onPasswordChange,
                     label = "Confirma con tu contraseña",
+                    containerColor = MaterialTheme.colorScheme.background, // contrasta con el diálogo en claro y oscuro
                     modifier = Modifier.padding(top = 12.dp),
                 )
             }

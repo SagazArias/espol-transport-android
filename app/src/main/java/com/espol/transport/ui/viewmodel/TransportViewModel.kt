@@ -18,6 +18,7 @@ import com.espol.transport.data.model.PassengerMatchSearch
 import com.espol.transport.data.model.TripBookingCreate
 import com.espol.transport.data.model.TripTimesOut
 import com.espol.transport.data.model.UserMe
+import com.espol.transport.data.model.ZoneResolveRequest
 import com.espol.transport.ui.util.toUserMessage
 import kotlinx.coroutines.launch
 import java.time.LocalTime
@@ -49,6 +50,25 @@ class TransportViewModel(private val api: ApiService) : ViewModel() {
         private set
 
     var currentUser by mutableStateOf<UserMe?>(null)
+
+    /** Nombres del catálogo de sectores, para sugerirlos y no tener que escribirlos. */
+    var zones by mutableStateOf<List<String>>(emptyList())
+        private set
+
+    fun loadZones() {
+        if (zones.isNotEmpty()) return
+        viewModelScope.launch {
+            try {
+                // shortcut: la API no tiene "listar zonas"; resolve siempre devuelve el catálogo en `suggestions`.
+                // Si el catálogo crece mucho, agregar un endpoint GET /zones.
+                zones = api.resolveZone(ZoneResolveRequest("a")).suggestions
+                    .filterNot { it.is_espol_campus }
+                    .map { it.name }
+            } catch (_: Exception) {
+                // Sin sugerencias la app sigue funcionando: el usuario puede escribir el sector.
+            }
+        }
+    }
 
     fun clearError() {
         errorMessage = null
