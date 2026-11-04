@@ -8,6 +8,16 @@ Es el cliente móvil del backend [`espol-transport-api`](https://github.com/Saga
 
 [![CI](https://github.com/SagazArias/espol-transport-android/actions/workflows/ci.yml/badge.svg)](https://github.com/SagazArias/espol-transport-android/actions/workflows/ci.yml)
 
+| Bienvenida | Bandeja (pasajero) | Modo claro | Buscar viaje |
+|---|---|---|---|
+| <img src="docs/capturas/bienvenida.webp" alt="Pantalla de bienvenida" width="200"> | <img src="docs/capturas/bandeja.webp" alt="Bandeja con un viaje agendado" width="200"> | <img src="docs/capturas/bandeja-clara.webp" alt="Bandeja en modo claro" width="200"> | <img src="docs/capturas/buscar.webp" alt="Búsqueda de viaje" width="200"> |
+
+| Resultados | Horario del conductor | Editor de un día |
+|---|---|---|
+| <img src="docs/capturas/resultados.webp" alt="Conductor encontrado" width="200"> | <img src="docs/capturas/horario.webp" alt="Horario semanal del conductor" width="200"> | <img src="docs/capturas/editor-dia.webp" alt="Editor del día con sectores para tocar" width="200"> |
+
+*Capturas en un teléfono real (Android 16) con cuentas de demostración; los nombres, la placa y el vehículo son ficticios.*
+
 ---
 
 ## Problema que resuelve
