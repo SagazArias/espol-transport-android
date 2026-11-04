@@ -18,7 +18,6 @@ import com.espol.transport.data.model.PassengerMatchSearch
 import com.espol.transport.data.model.TripBookingCreate
 import com.espol.transport.data.model.TripTimesOut
 import com.espol.transport.data.model.UserMe
-import com.espol.transport.data.model.ZoneResolveRequest
 import com.espol.transport.ui.util.toUserMessage
 import kotlinx.coroutines.launch
 import java.time.LocalTime
@@ -59,9 +58,7 @@ class TransportViewModel(private val api: ApiService) : ViewModel() {
         if (zones.isNotEmpty()) return
         viewModelScope.launch {
             try {
-                // shortcut: la API no tiene "listar zonas"; resolve siempre devuelve el catálogo en `suggestions`.
-                // Si el catálogo crece mucho, agregar un endpoint GET /zones.
-                zones = api.resolveZone(ZoneResolveRequest("a")).suggestions
+                zones = api.listZones()
                     .filterNot { it.is_espol_campus }
                     .map { it.name }
             } catch (_: Exception) {
