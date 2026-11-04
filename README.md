@@ -6,6 +6,8 @@ Es el cliente móvil del backend [`espol-transport-api`](https://github.com/Saga
 
 **Versión actual: 0.2.1** · [Descargar APK](https://github.com/SagazArias/espol-transport-android/releases/latest) (Android 8.0+)
 
+[![CI](https://github.com/SagazArias/espol-transport-android/actions/workflows/ci.yml/badge.svg)](https://github.com/SagazArias/espol-transport-android/actions/workflows/ci.yml)
+
 ---
 
 ## Problema que resuelve
@@ -94,7 +96,7 @@ UI (Composables)  ──>  ViewModels  ──>  ApiService (Retrofit)  ──>  
   - `TransportViewModel`: horarios y tarifas, búsqueda de coincidencias, reservas, bandeja, completar/cancelar/calificar y horario del conductor.
 - **Navegación** (`navigation/AppNav.kt`): un `NavHost` con rutas `bootstrap` → `welcome` → selección de rol → `login` / registro / recuperación → `role_gate`, que consulta `GET auth/me` y lleva a la bandeja del pasajero o del conductor; desde ahí se accede a búsqueda/resultados o al horario. Si `auth/me` falla por red (por ejemplo, la API despertando), se ofrece reintentar sin perder la sesión; solo un 401/403 la cierra. Las pantallas de autenticación están en `ui/auth/`.
 - **Capa de datos**
-  - `ApiService`: interfaz Retrofit con funciones `suspend` (rutas `auth/*`, `trip-times`, `zones/resolve`, `driver/weekly-schedule`, `matches/search`, `bookings/*`).
+  - `ApiService`: interfaz Retrofit con funciones `suspend` (rutas `auth/*`, `trip-times`, `zones` y `zones/resolve`, `driver/weekly-schedule`, `matches/search`, `bookings/*`).
   - `ApiProvider`: configura Gson con `snake_case` (`LOWER_CASE_WITH_UNDERSCORES`), timeouts de 30 s, un `AuthInterceptor` que añade `Authorization: Bearer <token>` y logging nivel `BASIC`.
   - `TokenStore`: guarda el token JWT y la preferencia "mantener sesión" en DataStore (`auth_session`). Al arrancar, la pantalla `bootstrap` decide si hay auto-login.
 - **Errores**: `HttpErrors.kt` convierte excepciones y el campo `detail` de FastAPI en mensajes legibles en español (incluidos los errores de conexión y de tiempo de espera).
@@ -173,6 +175,14 @@ UI (Composables)  ──>  ViewModels  ──>  ApiService (Retrofit)  ──>  
 
 > Si cambias `api.base.url`, vuelve a compilar: el valor queda fijado en `BuildConfig`.
 
+### Pruebas
+
+```bash
+./gradlew testDebugUnitTest
+```
+
+Las pruebas unitarias (`app/src/test/`) cubren la lógica sin UI: políticas de contraseña y de frase de recuperación, formato de horas y tarifas, el resumen de cada día del horario y los mensajes de error, incluido el caso de la API que despierta en Render. El CI de GitHub Actions las corre y compila el APK en cada push y en cada PR.
+
 ---
 
 ## Estructura del proyecto
@@ -212,9 +222,9 @@ app/src/main/
 - Servir la API por HTTPS y quitar el permiso global de tráfico en claro (o limitarlo a un build de debug).
 - Cifrar el token en reposo (por ejemplo con Android Keystore) y manejar expiración/renovación.
 - Activar R8/minificación en release.
-- Pruebas unitarias de ViewModels y políticas de validación, y pruebas de UI con Compose.
+- Pruebas de ViewModels con una API falsa y pruebas de UI con Compose.
 - Notificaciones push para nuevas reservas y cancelaciones.
-- Mapa para elegir sectores, y un endpoint `GET /zones` para listar el catálogo (hoy se obtiene de `zones/resolve`).
+- Mapa para elegir sectores.
 - Un ícono de la app definitivo (el actual es provisional).
 - Inyección de dependencias con Hilt y una capa de repositorios si el proyecto crece.
 
