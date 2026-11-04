@@ -4,6 +4,8 @@ Aplicación Android nativa (Kotlin + Jetpack Compose) de un sistema de **carpool
 
 Es el cliente móvil del backend [`espol-transport-api`](https://github.com/SagazArias/espol-transport-api) (FastAPI).
 
+**Versión actual: 0.2.1** · [Descargar APK](https://github.com/SagazArias/espol-transport-android/releases/latest) (Android 8.0+)
+
 ---
 
 ## Problema que resuelve
@@ -32,21 +34,29 @@ Muchos estudiantes recorren a diario las mismas rutas hacia el campus Gustavo Ga
 
 ### Pasajero
 
-- Buscar viaje: tipo (**ida** hacia ESPOL o **regreso** a casa), sector de origen/destino en texto libre, día (lunes a viernes) y horario (horas predefinidas por la API u "otra hora" HH:MM).
-- Ver conductores coincidentes con: nombre, celular, vehículo, zona y ruta coincidente, diferencia de minutos respecto a la hora pedida, cupos disponibles, tarifa y **calificación promedio**.
+- Buscar viaje: tipo (**ida** hacia ESPOL o **regreso** a casa), sector de origen/destino (se escribe o se toca uno de los sectores sugeridos), día (lunes a viernes) y hora (horas predefinidas por la API u "otra hora" con selector de reloj).
+- Ver conductores coincidentes con: nombre, vehículo, ruta coincidente, cupos disponibles, tarifa y **calificación promedio**; botón para llamar al conductor.
 - Reservar un cupo.
 
 ### Conductor
 
-- Configurar el **horario semanal**: sector de origen, cupos (aplican a toda la semana) y tarifa (valores permitidos por la API, entre $1.00 y $2.50).
-- Por cada día: hora de ida y de regreso, y la ruta de cada tramo como lista de sectores separados por coma.
-- Guardar / actualizar el horario.
+- Configurar el **horario semanal**: sector de origen, cupos (aplican a toda la semana) y tarifa (valores permitidos por la API, entre $1.00 y $2.50). Cupos y tarifa se cambian con botones − / +.
+- La semana se ve como una lista de lunes a viernes con un resumen por día ("Ida 09:00 · Regreso 17:00"). Al tocar un día se abre un editor con:
+  - **Aplicar a**: copiar la misma configuración a varios días a la vez.
+  - Ida y regreso que se activan o desactivan, hora de salida (sugeridas u "otra hora" con reloj) y los **sectores de la ruta**, elegidos tocando el catálogo de sectores de la API o escribiendo uno nuevo.
+- Guardar / actualizar el horario. Un día marcado "Sin viajes" se borra en el servidor.
 
 ### Bandeja (ambos roles)
 
-- Lista de viajes reservados y alertas (por ejemplo, cancelaciones).
-- **Cancelar** un viaje indicando el motivo, que recibe la otra parte.
-- **Completar** un viaje y, como pasajero, **calificar al conductor** de 1 a 5 estrellas.
+- Lista de viajes reservados y avisos (por ejemplo, reservas nuevas o cancelaciones).
+- Desde cada viaje: **llamar** a la otra parte, **cancelar** indicando el motivo (lo recibe la otra parte) o marcarlo como **concluido**; como pasajero, luego se **califica al conductor** de 1 a 5 estrellas.
+- Menú de cuenta (avatar) para cerrar sesión o eliminar la cuenta.
+
+### Diseño
+
+- Estética inspirada en Apple sobre Material 3: títulos grandes que se contraen al hacer scroll, fondos agrupados y tarjetas, en **modo claro y oscuro** según el sistema.
+- Tipografía **Inter** (cortes de texto y de títulos) incluida en la app.
+- **Liquid glass claro** (sin desenfoque) en el botón atrás, el menú de cuenta y las barras flotantes de acción.
 
 ---
 
@@ -82,12 +92,12 @@ UI (Composables)  ──>  ViewModels  ──>  ApiService (Retrofit)  ──>  
 - **ViewModels**
   - `AuthViewModel`: registro, login, recuperación de contraseña, sesión persistida, logout y eliminación de cuenta.
   - `TransportViewModel`: horarios y tarifas, búsqueda de coincidencias, reservas, bandeja, completar/cancelar/calificar y horario del conductor.
-- **Navegación** (`navigation/AppNav.kt`): un `NavHost` con rutas `bootstrap` → `welcome` → selección de rol → `login` / registro / recuperación → `role_gate`, que consulta `GET auth/me` y lleva a la bandeja del pasajero o del conductor; desde ahí se accede a búsqueda/resultados o al horario.
+- **Navegación** (`navigation/AppNav.kt`): un `NavHost` con rutas `bootstrap` → `welcome` → selección de rol → `login` / registro / recuperación → `role_gate`, que consulta `GET auth/me` y lleva a la bandeja del pasajero o del conductor; desde ahí se accede a búsqueda/resultados o al horario. Si `auth/me` falla por red (por ejemplo, la API despertando), se ofrece reintentar sin perder la sesión; solo un 401/403 la cierra. Las pantallas de autenticación están en `ui/auth/`.
 - **Capa de datos**
   - `ApiService`: interfaz Retrofit con funciones `suspend` (rutas `auth/*`, `trip-times`, `zones/resolve`, `driver/weekly-schedule`, `matches/search`, `bookings/*`).
   - `ApiProvider`: configura Gson con `snake_case` (`LOWER_CASE_WITH_UNDERSCORES`), timeouts de 30 s, un `AuthInterceptor` que añade `Authorization: Bearer <token>` y logging nivel `BASIC`.
   - `TokenStore`: guarda el token JWT y la preferencia "mantener sesión" en DataStore (`auth_session`). Al arrancar, la pantalla `bootstrap` decide si hay auto-login.
-- **Errores**: `HttpErrors.kt` convierte excepciones y el campo `detail` de FastAPI en mensajes legibles para el usuario.
+- **Errores**: `HttpErrors.kt` convierte excepciones y el campo `detail` de FastAPI en mensajes legibles en español (incluidos los errores de conexión y de tiempo de espera).
 
 ---
 
@@ -159,6 +169,8 @@ UI (Composables)  ──>  ViewModels  ──>  ApiService (Retrofit)  ──>  
 
    Sin ese archivo, `assembleRelease` genera un APK sin firmar.
 
+   Los APK publicados están en [Releases](https://github.com/SagazArias/espol-transport-android/releases). La versión se define en `app/build.gradle.kts` (`versionName` / `versionCode`).
+
 > Si cambias `api.base.url`, vuelve a compilar: el valor queda fijado en `BuildConfig`.
 
 ---
@@ -170,23 +182,26 @@ app/src/main/
 ├── AndroidManifest.xml
 ├── res/
 │   ├── values/ (strings, themes)
+│   ├── values-night/, values-v27/   # colores de ventana y barras del sistema
+│   ├── font/                        # Inter (OFL)
 │   ├── drawable/ (ícono)
 │   └── xml/network_security_config.xml
 └── java/com/espol/transport/
     ├── MainActivity.kt
     ├── AppContainer.kt              # DI manual
-    ├── navigation/AppNav.kt         # NavHost + pantallas de auth
+    ├── navigation/AppNav.kt         # NavHost, arranque y role_gate
     ├── data/
     │   ├── api/                     # ApiService, ApiProvider (Retrofit/OkHttp)
     │   ├── local/TokenStore.kt      # DataStore
     │   └── model/                   # DTOs de auth y transporte
     └── ui/
         ├── viewmodel/               # AuthViewModel, TransportViewModel
+        ├── auth/                    # bienvenida, login, registro, recuperación
         ├── passenger/               # búsqueda y resultados
-        ├── driver/                  # horario semanal
+        ├── driver/                  # horario semanal y editor por día
         ├── inbox/                   # bandeja, cancelar, completar, calificar
-        ├── components/              # PasswordTextField, DeleteAccountDialog
-        ├── theme/                   # tema Material 3
+        ├── components/              # AppScreen, botones, campos, tarjetas, vidrio (Glass.kt)
+        ├── theme/                   # colores claro/oscuro, tipografía Inter, formas
         └── util/                    # políticas de contraseña/frase, errores HTTP
 ```
 
@@ -196,12 +211,15 @@ app/src/main/
 
 - Servir la API por HTTPS y quitar el permiso global de tráfico en claro (o limitarlo a un build de debug).
 - Cifrar el token en reposo (por ejemplo con Android Keystore) y manejar expiración/renovación.
-- Activar R8/minificación en release y configurar firma.
+- Activar R8/minificación en release.
 - Pruebas unitarias de ViewModels y políticas de validación, y pruebas de UI con Compose.
 - Notificaciones push para nuevas reservas y cancelaciones.
-- Mapa para elegir sectores en lugar de texto libre.
+- Mapa para elegir sectores, y un endpoint `GET /zones` para listar el catálogo (hoy se obtiene de `zones/resolve`).
+- Un ícono de la app definitivo (el actual es provisional).
 - Inyección de dependencias con Hilt y una capa de repositorios si el proyecto crece.
 
 ## Licencia
 
 Distribuido bajo la licencia MIT. Copyright (c) 2026 Samuel Arias. Ver [LICENSE](LICENSE).
+
+La fuente Inter se distribuye bajo la SIL Open Font License 1.1; ver [licenses/Inter-OFL.txt](licenses/Inter-OFL.txt).
