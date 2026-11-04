@@ -1,19 +1,20 @@
 package com.espol.transport.ui.components
 
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 
@@ -24,16 +25,20 @@ fun PasswordTextField(
     label: String,
     modifier: Modifier = Modifier,
     supportingText: String? = null,
+    isError: Boolean = false,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHighest,
 ) {
     var visible by rememberSaveable { mutableStateOf(false) }
 
-    OutlinedTextField(
+    AppTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label) },
-        supportingText = supportingText?.let { { Text(it) } },
-        singleLine = true,
-        modifier = modifier.fillMaxWidth(),
+        label = label,
+        supportingText = supportingText,
+        isError = isError,
+        containerColor = containerColor,
+        modifier = modifier,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
         visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
         trailingIcon = {
             IconButton(onClick = { visible = !visible }) {

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="app_background">#FF000000</color>
+    <color name="nav_bar">#FF000000</color>
+    <bool name="light_bars">false</bool>
+</resources>

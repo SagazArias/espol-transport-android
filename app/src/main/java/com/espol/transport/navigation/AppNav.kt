@@ -1,35 +1,17 @@
 package com.espol.transport.navigation
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.DirectionsCar
-import androidx.compose.material3.Button
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -40,24 +22,28 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.espol.transport.ui.components.PasswordTextField
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.espol.transport.AppContainer
-import com.espol.transport.data.model.UserMe
-import com.espol.transport.ui.util.PASSWORD_HINT
-import com.espol.transport.ui.util.RECOVERY_PHRASE_HINT
-import com.espol.transport.ui.util.isStrongPassword
-import com.espol.transport.ui.util.isValidRecoveryPhrase
-import com.espol.transport.ui.util.toUserMessage
+import com.espol.transport.ui.auth.DriverRegisterScreen
+import com.espol.transport.ui.auth.ForgotPasswordScreen
+import com.espol.transport.ui.auth.LoginRolePickScreen
+import com.espol.transport.ui.auth.LoginScreen
+import com.espol.transport.ui.auth.PassengerRegisterScreen
+import com.espol.transport.ui.auth.RegisterRolePickScreen
+import com.espol.transport.ui.auth.ResetPasswordScreen
+import com.espol.transport.ui.auth.WelcomeScreen
+import com.espol.transport.ui.components.InlineMessage
+import com.espol.transport.ui.components.PrimaryButton
+import com.espol.transport.ui.components.ScreenPadding
 import com.espol.transport.ui.driver.DriverScheduleScreen
 import com.espol.transport.ui.inbox.InboxScreen
 import com.espol.transport.ui.passenger.PassengerResultsScreen
 import com.espol.transport.ui.passenger.PassengerSearchScreen
+import com.espol.transport.ui.util.toUserMessage
 import com.espol.transport.ui.viewmodel.AuthViewModel
 import com.espol.transport.ui.viewmodel.TransportViewModel
 import kotlinx.coroutines.launch
@@ -79,7 +65,6 @@ private object Routes {
     const val DriverSchedule = "driver_schedule"
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppNav(container: AppContainer) {
     val nav = rememberNavController()
@@ -94,7 +79,8 @@ fun AppNav(container: AppContainer) {
     var isDriverInbox by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snack) },
+        snackbarHost = { SnackbarHost(snack, Modifier.navigationBarsPadding()) },
+        contentWindowInsets = WindowInsets(0), // cada pantalla maneja sus barras (la barra superior se extiende bajo la hora)
     ) { padding ->
         NavHost(
             navController = nav,
@@ -272,50 +258,11 @@ fun AppNav(container: AppContainer) {
                 }
             }
             composable(Routes.DriverSchedule) {
-                val name = transportVm.currentUser?.full_name ?: "Conductor"
                 DriverScheduleScreen(
                     transportVm = transportVm,
-                    authVm = authVm,
-                    userName = name,
                     onBack = { nav.popBackStack() },
-                    onLogout = { logout(authVm, nav) },
-                    onAccountDeleted = {
-                        scope.launch { snack.showSnackbar("Cuenta eliminada.") }
-                        logout(authVm, nav)
-                    },
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun WelcomeScreen(
-    onLogin: () -> Unit,
-    onRegister: () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text("ESPOL Transporte", style = MaterialTheme.typography.headlineMedium)
-        Spacer(Modifier.height(8.dp))
-        Text(
-            "Transporte compartido hacia ESPOL",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(32.dp))
-        Button(onClick = onLogin, modifier = Modifier.fillMaxWidth()) {
-            Text("Iniciar sesión")
-        }
-        Spacer(Modifier.height(12.dp))
-        Button(onClick = onRegister, modifier = Modifier.fillMaxWidth()) {
-            Text("Crear una cuenta")
         }
     }
 }
@@ -329,415 +276,8 @@ private fun SessionBootstrapScreen(
         val dest = if (authVm.hasPersistedSession()) Routes.RoleGate else Routes.Welcome
         onContinue(dest)
     }
-    Column(
-        Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         CircularProgressIndicator()
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun LoginRolePickScreen(
-    onBack: () -> Unit,
-    onPassenger: () -> Unit,
-    onDriver: () -> Unit,
-) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Iniciar sesión") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás")
-                    }
-                },
-            )
-        },
-    ) { inner ->
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(inner)
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
-        ) {
-            Text("¿Eres pasajero o conductor?", style = MaterialTheme.typography.titleMedium)
-            Button(onClick = onPassenger, modifier = Modifier.fillMaxWidth()) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Person, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Pasajero (estudiante)")
-                }
-            }
-            Button(onClick = onDriver, modifier = Modifier.fillMaxWidth()) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.DirectionsCar, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Conductor")
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun RegisterRolePickScreen(
-    onBack: () -> Unit,
-    onPassenger: () -> Unit,
-    onDriver: () -> Unit,
-) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Crear cuenta") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás")
-                    }
-                },
-            )
-        },
-    ) { inner ->
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(inner)
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
-        ) {
-            Text("¿Qué tipo de cuenta quieres crear?", style = MaterialTheme.typography.titleMedium)
-            Button(onClick = onPassenger, modifier = Modifier.fillMaxWidth()) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Person, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Estudiante (pasajero)")
-                }
-            }
-            Button(onClick = onDriver, modifier = Modifier.fillMaxWidth()) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.DirectionsCar, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Conductor")
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun LoginScreen(
-    authVm: AuthViewModel,
-    expectedRole: String?,
-    onBack: () -> Unit,
-    onForgotPassword: () -> Unit,
-    onLoggedIn: () -> Unit,
-) {
-    val scope = rememberCoroutineScope()
-    var email by rememberSaveable { mutableStateOf("") }
-    var password by rememberSaveable { mutableStateOf("") }
-    var stayLoggedIn by rememberSaveable { mutableStateOf(true) }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Iniciar sesión") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás")
-                    }
-                },
-            )
-        },
-    ) { inner ->
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(inner)
-                .padding(24.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            authVm.errorMessage?.let { err ->
-                Text(err, color = MaterialTheme.colorScheme.error)
-            }
-            OutlinedTextField(
-                value = email,
-                onValueChange = { authVm.clearError(); email = it },
-                label = { Text("Correo") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-            )
-            PasswordTextField(
-                value = password,
-                onValueChange = { authVm.clearError(); password = it.filter { ch -> !ch.isWhitespace() } },
-                label = "Contraseña",
-                supportingText = PASSWORD_HINT,
-            )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Checkbox(checked = stayLoggedIn, onCheckedChange = { stayLoggedIn = it })
-                Text("Mantener sesión iniciada")
-            }
-            TextButton(onClick = onForgotPassword, modifier = Modifier.align(Alignment.End)) {
-                Text("¿Olvidaste tu contraseña?")
-            }
-            if (authVm.busy) {
-                CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
-            } else {
-                Button(
-                    onClick = {
-                        authVm.login(email, password, stayLoggedIn) {
-                            scope.launch {
-                                try {
-                                    val me = authVm.fetchMe()
-                                    if (expectedRole != null && me.role != expectedRole) {
-                                        authVm.logout { }
-                                        authVm.errorMessage = when (expectedRole) {
-                                            "student" -> "Esta cuenta no es de pasajero. Elige «Conductor» al iniciar sesión."
-                                            else -> "Esta cuenta no es de conductor. Elige «Pasajero» al iniciar sesión."
-                                        }
-                                    } else {
-                                        onLoggedIn()
-                                    }
-                                } catch (e: Exception) {
-                                    authVm.errorMessage = e.toUserMessage()
-                                }
-                            }
-                        }
-                    },
-                    enabled = email.isNotBlank() && isStrongPassword(password),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text("Entrar")
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun PassengerRegisterScreen(
-    authVm: AuthViewModel,
-    onBack: () -> Unit,
-    onRegistered: () -> Unit,
-) {
-    var first by rememberSaveable { mutableStateOf("") }
-    var last by rememberSaveable { mutableStateOf("") }
-    var phone by rememberSaveable { mutableStateOf("") }
-    var email by rememberSaveable { mutableStateOf("") }
-    var password by rememberSaveable { mutableStateOf("") }
-    var confirmPassword by rememberSaveable { mutableStateOf("") }
-    var recoveryPhrase by rememberSaveable { mutableStateOf("") }
-    val passwordsMatch = password == confirmPassword
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Registro pasajero") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás")
-                    }
-                },
-            )
-        },
-    ) { inner ->
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(inner)
-                .padding(24.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Text(
-                "Registro solo con correo institucional @espol.edu.ec. Un correo = una cuenta.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            authVm.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            OutlinedTextField(
-                value = first,
-                onValueChange = { authVm.clearError(); first = it },
-                label = { Text("Nombre") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = last,
-                onValueChange = { authVm.clearError(); last = it },
-                label = { Text("Apellido") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = phone,
-                onValueChange = { authVm.clearError(); phone = it },
-                label = { Text("Celular") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-            )
-            OutlinedTextField(
-                value = email,
-                onValueChange = { authVm.clearError(); email = it.trim().lowercase() },
-                label = { Text("Correo @espol.edu.ec") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-            )
-            PasswordTextField(
-                value = password,
-                onValueChange = { authVm.clearError(); password = it.filter { ch -> !ch.isWhitespace() } },
-                label = "Contraseña",
-                supportingText = PASSWORD_HINT,
-            )
-            PasswordTextField(
-                value = confirmPassword,
-                onValueChange = { authVm.clearError(); confirmPassword = it.filter { ch -> !ch.isWhitespace() } },
-                label = "Vuelva a escribir su contraseña",
-            )
-            if (!passwordsMatch && confirmPassword.isNotEmpty()) {
-                Text("Las contraseñas no coinciden.", color = MaterialTheme.colorScheme.error)
-            }
-            OutlinedTextField(
-                value = recoveryPhrase,
-                onValueChange = { authVm.clearError(); recoveryPhrase = it.filter { ch -> !ch.isWhitespace() } },
-                label = { Text("Palabra clave de recuperación") },
-                supportingText = { Text(RECOVERY_PHRASE_HINT) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            if (authVm.busy) {
-                CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
-            } else {
-                Button(
-                    onClick = {
-                        authVm.registerPassenger(first, last, phone, email, password, recoveryPhrase, onRegistered)
-                    },
-                    enabled = first.isNotBlank() && last.isNotBlank() && phone.length >= 8 &&
-                        isStrongPassword(password) && passwordsMatch && confirmPassword.isNotBlank() &&
-                        isValidRecoveryPhrase(recoveryPhrase) &&
-                        email.endsWith("@espol.edu.ec", ignoreCase = true),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text("Crear cuenta")
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun DriverRegisterScreen(
-    authVm: AuthViewModel,
-    onBack: () -> Unit,
-    onRegistered: () -> Unit,
-) {
-    var first by rememberSaveable { mutableStateOf("") }
-    var last by rememberSaveable { mutableStateOf("") }
-    var phone by rememberSaveable { mutableStateOf("") }
-    var email by rememberSaveable { mutableStateOf("") }
-    var password by rememberSaveable { mutableStateOf("") }
-    var confirmPassword by rememberSaveable { mutableStateOf("") }
-    var recoveryPhrase by rememberSaveable { mutableStateOf("") }
-    var plate by rememberSaveable { mutableStateOf("") }
-    val passwordsMatch = password == confirmPassword
-    var brand by rememberSaveable { mutableStateOf("") }
-    var model by rememberSaveable { mutableStateOf("") }
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Registro conductor") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás")
-                    }
-                },
-            )
-        },
-    ) { inner ->
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(inner)
-                .padding(24.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Text(
-                "Completa tus datos y los del vehículo. Un correo = una cuenta.",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            authVm.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            OutlinedTextField(first, { authVm.clearError(); first = it }, label = { Text("Nombre") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(last, { authVm.clearError(); last = it }, label = { Text("Apellido") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(
-                value = phone,
-                onValueChange = { authVm.clearError(); phone = it },
-                label = { Text("Celular") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                modifier = Modifier.fillMaxWidth()
-            )
-            OutlinedTextField(
-                value = email,
-                onValueChange = { authVm.clearError(); email = it },
-                label = { Text("Correo (inicio de sesión)") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                modifier = Modifier.fillMaxWidth()
-            )
-            PasswordTextField(
-                value = password,
-                onValueChange = { authVm.clearError(); password = it.filter { ch -> !ch.isWhitespace() } },
-                label = "Contraseña",
-                supportingText = PASSWORD_HINT,
-            )
-            PasswordTextField(
-                value = confirmPassword,
-                onValueChange = { authVm.clearError(); confirmPassword = it.filter { ch -> !ch.isWhitespace() } },
-                label = "Vuelva a escribir su contraseña",
-            )
-            if (!passwordsMatch && confirmPassword.isNotEmpty()) {
-                Text("Las contraseñas no coinciden.", color = MaterialTheme.colorScheme.error)
-            }
-            OutlinedTextField(
-                value = recoveryPhrase,
-                onValueChange = { authVm.clearError(); recoveryPhrase = it.filter { ch -> !ch.isWhitespace() } },
-                label = { Text("Palabra clave de recuperación") },
-                supportingText = { Text(RECOVERY_PHRASE_HINT) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(plate, { authVm.clearError(); plate = it }, label = { Text("Placa") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(brand, { authVm.clearError(); brand = it }, label = { Text("Marca del auto") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(model, { authVm.clearError(); model = it }, label = { Text("Modelo") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            if (authVm.busy) {
-                CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
-            } else {
-                Button(
-                    onClick = {
-                        authVm.registerDriver(first, last, phone, email, password, recoveryPhrase, plate, brand, model, onRegistered)
-                    },
-                    enabled = listOf(first, last, phone, email, password, confirmPassword, recoveryPhrase, plate, brand, model).all { it.isNotBlank() } &&
-                        isStrongPassword(password) && passwordsMatch && isValidRecoveryPhrase(recoveryPhrase) && phone.length >= 8,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text("Registrar conductor")
-                }
-            }
-        }
     }
 }
 
@@ -767,143 +307,18 @@ private fun RoleGateScreen(
     }
 
     Column(
-        Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
+        Modifier
+            .fillMaxSize()
+            .safeDrawingPadding()
+            .padding(ScreenPadding),
+        verticalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         if (loadError != null) {
-            Text(loadError!!, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(24.dp))
-            Button(onClick = onError) { Text("Ir a inicio de sesión") }
+            InlineMessage(loadError)
+            PrimaryButton("Ir a inicio de sesión", onClick = onError)
         } else {
             CircularProgressIndicator()
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ForgotPasswordScreen(
-    authVm: AuthViewModel,
-    onBack: () -> Unit,
-    onVerified: () -> Unit,
-) {
-    var email by rememberSaveable { mutableStateOf("") }
-    var recoveryPhrase by rememberSaveable { mutableStateOf("") }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Recuperar contraseña") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás")
-                    }
-                },
-            )
-        },
-    ) { inner ->
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(inner)
-                .padding(24.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(
-                "Ingresa el correo de tu cuenta y la palabra clave que definiste al registrarte.",
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            authVm.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            OutlinedTextField(
-                value = email,
-                onValueChange = { authVm.clearError(); email = it },
-                label = { Text("Correo") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-            )
-            OutlinedTextField(
-                value = recoveryPhrase,
-                onValueChange = { authVm.clearError(); recoveryPhrase = it.filter { ch -> !ch.isWhitespace() } },
-                label = { Text("Palabra clave de recuperación") },
-                supportingText = { Text("Debe coincidir con la que guardaste al crear la cuenta.") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            if (authVm.busy) {
-                CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
-            } else {
-                Button(
-                    onClick = { authVm.verifyRecoveryPhrase(email, recoveryPhrase, onVerified) },
-                    enabled = email.isNotBlank() && isValidRecoveryPhrase(recoveryPhrase),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text("Continuar")
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ResetPasswordScreen(
-    authVm: AuthViewModel,
-    onBack: () -> Unit,
-    onReset: () -> Unit,
-) {
-    var newPassword by rememberSaveable { mutableStateOf("") }
-    var confirmPassword by rememberSaveable { mutableStateOf("") }
-    val passwordsMatch = newPassword == confirmPassword
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Nueva contraseña") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás")
-                    }
-                },
-            )
-        },
-    ) { inner ->
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(inner)
-                .padding(24.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text("Elige una nueva contraseña para tu cuenta.", style = MaterialTheme.typography.bodyLarge)
-            authVm.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            PasswordTextField(
-                value = newPassword,
-                onValueChange = { authVm.clearError(); newPassword = it.filter { ch -> !ch.isWhitespace() } },
-                label = "Nueva contraseña",
-                supportingText = PASSWORD_HINT,
-            )
-            PasswordTextField(
-                value = confirmPassword,
-                onValueChange = { authVm.clearError(); confirmPassword = it.filter { ch -> !ch.isWhitespace() } },
-                label = "Confirmar contraseña",
-            )
-            if (!passwordsMatch && confirmPassword.isNotEmpty()) {
-                Text("Las contraseñas no coinciden.", color = MaterialTheme.colorScheme.error)
-            }
-            if (authVm.busy) {
-                CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
-            } else {
-                Button(
-                    onClick = { authVm.resetPassword(newPassword, onReset) },
-                    enabled = isStrongPassword(newPassword) && passwordsMatch,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text("Guardar contraseña")
-                }
-            }
         }
     }
 }

@@ -1,4 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <style name="Theme.ESPOLTransport" parent="android:Theme.Material.Light.NoActionBar" />
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Coincide con colorScheme.background para que no haya destello al abrir la app. -->
+    <style name="Theme.ESPOLTransport" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/app_background</item>
+        <item name="android:statusBarColor">@color/app_background</item>
+        <item name="android:navigationBarColor">@color/nav_bar</item>
+        <item name="android:windowLightStatusBar">@bool/light_bars</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">@bool/light_bars</item>
+    </style>
+    <color name="app_background">#FFF2F2F7</color>
+    <!-- API 26 no tiene iconos oscuros en la barra de navegación: ahí queda negra. -->
+    <color name="nav_bar">#FF000000</color>
+    <bool name="light_bars">true</bool>
 </resources>
